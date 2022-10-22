@@ -47,7 +47,7 @@ class EasyTransfer {
   void begin(uint8_t *, uint8_t, Stream *theStream);
   // void begin(uint8_t *, uint8_t, NewSoftSerial *theSerial);
   void sendData();
-  boolean receiveData();
+  bool receiveData();
 
  private:
   Stream *_stream;

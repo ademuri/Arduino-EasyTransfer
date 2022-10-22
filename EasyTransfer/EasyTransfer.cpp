@@ -23,7 +23,7 @@ void EasyTransfer::sendData() {
   _stream->write(CS);
 }
 
-boolean EasyTransfer::receiveData() {
+bool EasyTransfer::receiveData() {
   // start off by looking for the header bytes. If they were already found in a
   // previous call, skip it.
   if (rx_len == 0) {
