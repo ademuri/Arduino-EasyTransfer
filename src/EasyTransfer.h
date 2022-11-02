@@ -44,19 +44,18 @@ class EasyTransfer {
   bool receiveData();
 
  private:
-  DataType *data;      // address of struct
+  DataType *data;  // address of struct
 
   Stream *_stream;
-  uint8_t rx_buffer[sizeof(DataType) + 1];    // address for temporary storage and parsing buffer
+  uint8_t rx_buffer[sizeof(DataType) +
+                    1];      // address for temporary storage and parsing buffer
   uint8_t rx_array_inx = 0;  // index for RX parsing buffer
   uint8_t rx_len = 0;        // RX packet length according to the packet
   uint8_t calc_CS = 0;       // calculated checksum
 };
 
 template <typename DataType>
-EasyTransfer<DataType>::EasyTransfer(DataType *data) : data(data) {
-
-}
+EasyTransfer<DataType>::EasyTransfer(DataType *data) : data(data) {}
 
 // Captures address and size of struct
 template <typename DataType>
@@ -72,8 +71,8 @@ void EasyTransfer<DataType>::sendData() {
   _stream->write(0x85);
   _stream->write(sizeof(DataType));
   for (size_t i = 0; i < sizeof(DataType); i++) {
-    CS ^= *((uint8_t*)data + i);
-    _stream->write(*((uint8_t*)data + i));
+    CS ^= *((uint8_t *)data + i);
+    _stream->write(*((uint8_t *)data + i));
   }
   _stream->write(CS);
 }
