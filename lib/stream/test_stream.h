@@ -12,7 +12,7 @@ class Stream {
   int read();
 
  private:
-  std::deque<int> deque_;
+  std::deque<int> deque_ = {};
 };
 
 #endif  // ARDUINO

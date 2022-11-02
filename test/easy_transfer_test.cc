@@ -6,9 +6,9 @@
 namespace {
 
 struct TestMessage {
-  uint8_t a;
-  uint32_t b;
-  float c;
+  uint8_t a = 0;
+  uint32_t b = 0;
+  float c = 0;
 };
 
 TEST(EasyTransfer, Transmit) {
@@ -29,6 +29,54 @@ TEST(EasyTransfer, Transmit) {
   EXPECT_EQ(in.a, out.a);
   EXPECT_EQ(in.b, out.b);
   EXPECT_EQ(in.c, out.c);
+}
+
+TEST(EasyTransfer, IgnoresGarbage) {
+  Stream stream;
+  TestMessage out;
+  EasyTransfer<TestMessage> transfer(&out);
+  transfer.begin(&stream);
+  EXPECT_EQ(out.a, 0);
+  EXPECT_EQ(out.b, 0);
+  EXPECT_EQ(out.c, 0);
+
+  stream.write(0);
+  transfer.receiveData();
+  EXPECT_FALSE(transfer.receiveData());
+
+  stream.write(0x6);
+  stream.write(0x6);
+  transfer.receiveData();
+  EXPECT_FALSE(transfer.receiveData());
+
+  stream.write(0x6);
+  stream.write(0x85);
+  stream.write(0x0);
+  stream.write(0x0);
+  transfer.receiveData();
+  EXPECT_FALSE(transfer.receiveData());
+}
+
+TEST(EasyTransfer, IgnoresSpuriousPreamble) {
+  Stream stream;
+  TestMessage out;
+  EasyTransfer<TestMessage> transfer(&out);
+  transfer.begin(&stream);
+
+  stream.write(0x0);
+  transfer.sendData();
+  EXPECT_TRUE(transfer.receiveData());
+
+  stream.write(0x6);
+  stream.write(0x1);
+  transfer.sendData();
+  EXPECT_FALSE(transfer.receiveData());
+  EXPECT_TRUE(transfer.receiveData());
+
+  stream.write(0x6);
+  transfer.sendData();
+  EXPECT_FALSE(transfer.receiveData());
+  EXPECT_TRUE(transfer.receiveData());
 }
 
 };  // namespace
