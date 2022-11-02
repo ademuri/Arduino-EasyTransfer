@@ -50,7 +50,6 @@ class EasyTransfer {
   uint8_t rx_buffer_[sizeof(DataType) + 1];
   uint8_t rx_array_index_ = 0;       // index for RX parsing buffer
   uint8_t rx_len_ = 0;               // RX packet length according to the packet
-  uint8_t calculated_checksum_ = 0;  // calculated checksum
 };
 
 template <typename DataType>
@@ -65,15 +64,15 @@ void EasyTransfer<DataType>::begin(Stream *stream) {
 // Sends out struct in binary, with header, length info and checksum
 template <typename DataType>
 void EasyTransfer<DataType>::sendData() {
-  uint8_t CS = sizeof(DataType);
+  uint8_t checksum = sizeof(DataType);
   stream_->write(0x06);
   stream_->write(0x85);
   stream_->write(sizeof(DataType));
   for (size_t i = 0; i < sizeof(DataType); i++) {
-    CS ^= *((uint8_t *)data_ + i);
+    checksum ^= *((uint8_t *)data_ + i);
     stream_->write(*((uint8_t *)data_ + i));
   }
-  stream_->write(CS);
+  stream_->write(checksum);
 }
 
 template <typename DataType>
@@ -114,12 +113,12 @@ bool EasyTransfer<DataType>::receiveData() {
     if (rx_len_ == (rx_array_index_ - 1)) {
       // seem to have got whole message
       // last uint8_t is CS
-      calculated_checksum_ = rx_len_;
+      uint8_t calculated_checksum = rx_len_;
       for (int i = 0; i < rx_len_; i++) {
-        calculated_checksum_ ^= rx_buffer_[i];
+        calculated_checksum ^= rx_buffer_[i];
       }
 
-      if (calculated_checksum_ == rx_buffer_[rx_array_index_ - 1]) {  // CS good
+      if (calculated_checksum == rx_buffer_[rx_array_index_ - 1]) {  // CS good
         memcpy(data_, rx_buffer_, sizeof(DataType));
         rx_len_ = 0;
         rx_array_index_ = 0;
