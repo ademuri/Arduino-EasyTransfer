@@ -48,8 +48,8 @@ class EasyTransfer {
 
   Stream *stream_ = nullptr;
   uint8_t rx_buffer_[sizeof(DataType) + 1];
-  uint8_t rx_array_index_ = 0;       // index for RX parsing buffer
-  uint8_t rx_len_ = 0;               // RX packet length according to the packet
+  uint8_t rx_array_index_ = 0;  // index for RX parsing buffer
+  uint8_t rx_len_ = 0;          // RX packet length according to the packet
 };
 
 template <typename DataType>

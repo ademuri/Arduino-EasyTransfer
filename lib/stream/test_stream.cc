@@ -5,9 +5,7 @@ size_t Stream::write(uint8_t c) {
   return 1;
 }
 
-int Stream::available() {
-  return deque_.size();
-}
+int Stream::available() { return deque_.size(); }
 
 int Stream::read() {
   if (deque_.empty()) {
