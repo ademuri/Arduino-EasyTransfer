@@ -44,61 +44,60 @@ class EasyTransfer {
   bool receiveData();
 
  private:
-  DataType *data;  // address of struct
+  DataType *const data_;  // address of struct
 
-  Stream *_stream;
-  uint8_t rx_buffer[sizeof(DataType) +
-                    1];      // address for temporary storage and parsing buffer
-  uint8_t rx_array_inx = 0;  // index for RX parsing buffer
-  uint8_t rx_len = 0;        // RX packet length according to the packet
-  uint8_t calc_CS = 0;       // calculated checksum
+  Stream *stream_;
+  uint8_t rx_buffer_[sizeof(DataType) + 1];
+  uint8_t rx_array_index_ = 0;       // index for RX parsing buffer
+  uint8_t rx_len_ = 0;               // RX packet length according to the packet
+  uint8_t calculated_checksum_ = 0;  // calculated checksum
 };
 
 template <typename DataType>
-EasyTransfer<DataType>::EasyTransfer(DataType *data) : data(data) {}
+EasyTransfer<DataType>::EasyTransfer(DataType *data) : data_(data) {}
 
 // Captures address and size of struct
 template <typename DataType>
 void EasyTransfer<DataType>::begin(Stream *stream) {
-  _stream = stream;
+  stream_ = stream;
 }
 
 // Sends out struct in binary, with header, length info and checksum
 template <typename DataType>
 void EasyTransfer<DataType>::sendData() {
   uint8_t CS = sizeof(DataType);
-  _stream->write(0x06);
-  _stream->write(0x85);
-  _stream->write(sizeof(DataType));
+  stream_->write(0x06);
+  stream_->write(0x85);
+  stream_->write(sizeof(DataType));
   for (size_t i = 0; i < sizeof(DataType); i++) {
-    CS ^= *((uint8_t *)data + i);
-    _stream->write(*((uint8_t *)data + i));
+    CS ^= *((uint8_t *)data_ + i);
+    stream_->write(*((uint8_t *)data_ + i));
   }
-  _stream->write(CS);
+  stream_->write(CS);
 }
 
 template <typename DataType>
 bool EasyTransfer<DataType>::receiveData() {
   // start off by looking for the header bytes. If they were already found in a
   // previous call, skip it.
-  if (rx_len == 0) {
+  if (rx_len_ == 0) {
     // this size check may be redundant due to the size check below, but for now
     // I'll leave it the way it is.
-    if (_stream->available() >= 3) {
+    if (stream_->available() >= 3) {
       // this will block until a 0x06 is found or buffer size becomes less
       // then 3.
-      while (_stream->read() != 0x06) {
+      while (stream_->read() != 0x06) {
         // This will trash any preamble junk in the serial buffer
         // but we need to make sure there is enough in the buffer to process
         // while we trash the rest if the buffer becomes too empty, we will
         // escape and try again on the next call
-        if (_stream->available() < 3) return false;
+        if (stream_->available() < 3) return false;
       }
-      if (_stream->read() == 0x85) {
-        rx_len = _stream->read();
+      if (stream_->read() == 0x85) {
+        rx_len_ = stream_->read();
         // make sure the binary structs on both Arduinos are the same size.
-        if (rx_len != sizeof(DataType)) {
-          rx_len = 0;
+        if (rx_len_ != sizeof(DataType)) {
+          rx_len_ = 0;
           return false;
         }
       }
@@ -107,30 +106,30 @@ bool EasyTransfer<DataType>::receiveData() {
 
   // we get here if we already found the header bytes, the struct size matched
   // what we know, and now we are byte aligned.
-  if (rx_len != 0) {
-    while (_stream->available() && rx_array_inx <= rx_len) {
-      rx_buffer[rx_array_inx++] = _stream->read();
+  if (rx_len_ != 0) {
+    while (stream_->available() && rx_array_index_ <= rx_len_) {
+      rx_buffer_[rx_array_index_++] = stream_->read();
     }
 
-    if (rx_len == (rx_array_inx - 1)) {
+    if (rx_len_ == (rx_array_index_ - 1)) {
       // seem to have got whole message
       // last uint8_t is CS
-      calc_CS = rx_len;
-      for (int i = 0; i < rx_len; i++) {
-        calc_CS ^= rx_buffer[i];
+      calculated_checksum_ = rx_len_;
+      for (int i = 0; i < rx_len_; i++) {
+        calculated_checksum_ ^= rx_buffer_[i];
       }
 
-      if (calc_CS == rx_buffer[rx_array_inx - 1]) {  // CS good
-        memcpy(data, rx_buffer, sizeof(DataType));
-        rx_len = 0;
-        rx_array_inx = 0;
+      if (calculated_checksum_ == rx_buffer_[rx_array_index_ - 1]) {  // CS good
+        memcpy(data_, rx_buffer_, sizeof(DataType));
+        rx_len_ = 0;
+        rx_array_index_ = 0;
         return true;
       }
 
       else {
         // failed checksum, need to clear this out anyway
-        rx_len = 0;
-        rx_array_inx = 0;
+        rx_len_ = 0;
+        rx_array_index_ = 0;
         return false;
       }
     }
