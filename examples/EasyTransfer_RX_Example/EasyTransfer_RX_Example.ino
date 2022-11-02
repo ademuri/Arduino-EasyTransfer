@@ -1,9 +1,7 @@
 #include <EasyTransfer.h>
 
-//create object
-EasyTransfer ET; 
 
-struct RECEIVE_DATA_STRUCTURE{
+struct ReceiveData{
   //put your variable definitions here for the data you want to receive
   //THIS MUST BE EXACTLY THE SAME ON THE OTHER ARDUINO
   int16_t blinks;
@@ -11,12 +9,14 @@ struct RECEIVE_DATA_STRUCTURE{
 };
 
 //give a name to the group of data
-RECEIVE_DATA_STRUCTURE mydata;
+ReceiveData mydata;
+
+EasyTransfer<ReceiveData> ET(&mydata); 
 
 void setup(){
   Serial.begin(9600);
   //start the library, pass in the data details and the name of the serial port. Can be Serial, Serial1, Serial2, etc. 
-  ET.begin(details(mydata), &Serial);
+  ET.begin(&Serial);
   
   pinMode(13, OUTPUT);
   

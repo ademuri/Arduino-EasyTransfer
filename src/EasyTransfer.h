@@ -28,36 +28,33 @@ Commons, 444 Castro Street, Suite 900, Mountain View, California, 94041, USA.
 #ifdef ARDUINO
 #include "Arduino.h"
 #else
-#include "test_stream.h"
-#endif
-
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
 
-// make it a little prettier on the front end.
-#define details(name) (uint8_t *)&name, sizeof(name)
+#include "test_stream.h"
+#endif
 
 template <typename DataType>
 class EasyTransfer {
  public:
-  EasyTransfer(DataType &data);
+  EasyTransfer(DataType *data);
   void begin(Stream *theStream);
   void sendData();
   bool receiveData();
 
  private:
-  DataType &data;      // address of struct
+  DataType *data;      // address of struct
 
   Stream *_stream;
-  DataType rx_buffer;    // address for temporary storage and parsing buffer
-  uint8_t rx_array_inx;  // index for RX parsing buffer
-  uint8_t rx_len;        // RX packet length according to the packet
-  uint8_t calc_CS;       // calculated checksum
+  uint8_t rx_buffer[sizeof(DataType) + 1];    // address for temporary storage and parsing buffer
+  uint8_t rx_array_inx = 0;  // index for RX parsing buffer
+  uint8_t rx_len = 0;        // RX packet length according to the packet
+  uint8_t calc_CS = 0;       // calculated checksum
 };
 
 template <typename DataType>
-EasyTransfer<DataType>::EasyTransfer(DataType &data) : data(data) {
+EasyTransfer<DataType>::EasyTransfer(DataType *data) : data(data) {
 
 }
 
@@ -74,9 +71,9 @@ void EasyTransfer<DataType>::sendData() {
   _stream->write(0x06);
   _stream->write(0x85);
   _stream->write(sizeof(DataType));
-  for (int i = 0; i < sizeof(DataType); i++) {
-    CS ^= *((uint8_t *)&data + i);
-    _stream->write(*((uint8_t *)&data + i));
+  for (size_t i = 0; i < sizeof(DataType); i++) {
+    CS ^= *((uint8_t*)data + i);
+    _stream->write(*((uint8_t*)data + i));
   }
   _stream->write(CS);
 }
@@ -113,7 +110,7 @@ bool EasyTransfer<DataType>::receiveData() {
   // what we know, and now we are byte aligned.
   if (rx_len != 0) {
     while (_stream->available() && rx_array_inx <= rx_len) {
-      ((uint8_t*)&rx_buffer)[rx_array_inx++] = _stream->read();
+      rx_buffer[rx_array_inx++] = _stream->read();
     }
 
     if (rx_len == (rx_array_inx - 1)) {
@@ -121,11 +118,11 @@ bool EasyTransfer<DataType>::receiveData() {
       // last uint8_t is CS
       calc_CS = rx_len;
       for (int i = 0; i < rx_len; i++) {
-        calc_CS ^= ((uint8_t*)&rx_buffer)[i];
+        calc_CS ^= rx_buffer[i];
       }
 
-      if (calc_CS == ((uint8_t*)&rx_buffer)[rx_array_inx - 1]) {  // CS good
-        memcpy(&data, &rx_buffer, sizeof(DataType));
+      if (calc_CS == rx_buffer[rx_array_inx - 1]) {  // CS good
+        memcpy(data, rx_buffer, sizeof(DataType));
         rx_len = 0;
         rx_array_inx = 0;
         return true;

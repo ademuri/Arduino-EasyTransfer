@@ -13,21 +13,15 @@ And the Arduino with the potentiometer will send it's value to the one with the 
 The servo will move to the position based on the potentiometer.
 */
 
-
-
 #include <EasyTransfer.h>
 
-//create two objects
-EasyTransfer ETin, ETout; 
-
-
-struct RECEIVE_DATA_STRUCTURE{
+struct ReceiveData {
   //put your variable definitions here for the data you want to receive
   //THIS MUST BE EXACTLY THE SAME ON THE OTHER ARDUINO
   int16_t buttonstate;
 };
 
-struct SEND_DATA_STRUCTURE{
+struct SendData{
   //put your variable definitions here for the data you want to receive
   //THIS MUST BE EXACTLY THE SAME ON THE OTHER ARDUINO
   int16_t buttonstate;
@@ -35,15 +29,17 @@ struct SEND_DATA_STRUCTURE{
 };
 
 //give a name to the group of data
-RECEIVE_DATA_STRUCTURE rxdata;
-SEND_DATA_STRUCTURE txdata;
+ReceiveData rxdata;
+SendData txdata;
 
+EasyTransfer<ReceiveData> ETin(&rxdata);
+EasyTransfer<SendData> ETout(&txdata); 
 
 void setup(){
   Serial.begin(9600);
   //start the library, pass in the data details and the name of the serial port. Can be Serial, Serial1, Serial2, etc.
-  ETin.begin(details(rxdata), &Serial);
-  ETout.begin(details(txdata), &Serial);
+  ETin.begin(&Serial);
+  ETout.begin(&Serial);
   
   pinMode(13, OUTPUT);  
   //enable pull-up

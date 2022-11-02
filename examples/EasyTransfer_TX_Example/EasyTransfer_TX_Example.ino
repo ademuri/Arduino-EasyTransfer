@@ -1,22 +1,20 @@
 #include <EasyTransfer.h>
 
-//create object
-EasyTransfer ET; 
-
-struct SEND_DATA_STRUCTURE{
+struct SendData {
   //put your variable definitions here for the data you want to send
   //THIS MUST BE EXACTLY THE SAME ON THE OTHER ARDUINO
   int16_t blinks;
   int16_t pause;
 };
 
-//give a name to the group of data
-SEND_DATA_STRUCTURE mydata;
+SendData mydata;
+
+EasyTransfer<SendData> ET(&mydata); 
 
 void setup(){
   Serial.begin(9600);
   //start the library, pass in the data details and the name of the serial port. Can be Serial, Serial1, Serial2, etc.
-  ET.begin(details(mydata), &Serial);
+  ET.begin(&Serial);
   
   pinMode(13, OUTPUT);
   

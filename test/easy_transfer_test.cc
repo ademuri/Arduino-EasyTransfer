@@ -14,17 +14,21 @@ struct TestMessage {
 TEST(EasyTransfer, Transmit) {
   Stream stream;
   TestMessage in;
-  EasyTransfer<TestMessage> transfer_in(in);
+  EasyTransfer<TestMessage> transfer_in(&in);
   transfer_in.begin(&stream);
 
   TestMessage out;
-  EasyTransfer<TestMessage> transfer_out(out);
+  EasyTransfer<TestMessage> transfer_out(&out);
   transfer_out.begin(&stream);
 
   out.a = 17;
+  out.b = 0xDEADBEEF;
+  out.c = 3.14159;
   transfer_out.sendData();
   EXPECT_TRUE(transfer_in.receiveData());
   EXPECT_EQ(in.a, out.a);
+  EXPECT_EQ(in.b, out.b);
+  EXPECT_EQ(in.c, out.c);
 }
 
 };  // namespace
