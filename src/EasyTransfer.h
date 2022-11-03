@@ -44,12 +44,22 @@ class EasyTransfer {
   bool receiveData();
 
  private:
+  enum class ParserState {
+    INIT,
+    READ_PREAMBLE_ONE,
+    READ_PREAMBLE_TWO,
+    READ_SIZE,
+  };
+
+  ParserState state_ = ParserState::INIT;
   DataType *const data_;  // address of struct
 
   Stream *stream_ = nullptr;
   uint8_t rx_buffer_[sizeof(DataType) + 1];
+  uint8_t read_bytes_ = 0;
   uint8_t rx_array_index_ = 0;  // index for RX parsing buffer
   uint8_t rx_len_ = 0;          // RX packet length according to the packet
+  uint8_t computed_checksum_ = 0;
 };
 
 template <typename DataType>
@@ -77,11 +87,58 @@ void EasyTransfer<DataType>::sendData() {
 
 template <typename DataType>
 bool EasyTransfer<DataType>::receiveData() {
-  // start off by looking for the header bytes. If they were already found in a
-  // previous call, skip it.
+  while (stream_->available()) {
+    switch (state_) {
+      case ParserState::INIT:
+        if (stream_->read() == 0x06) {
+          state_ = ParserState::READ_PREAMBLE_ONE;
+        }
+        break;
+
+      case ParserState::READ_PREAMBLE_ONE:
+        if (stream_->read() == 0x85) {
+          state_ = ParserState::READ_PREAMBLE_TWO;
+        }
+        break;
+
+      case ParserState::READ_PREAMBLE_TWO: {
+        uint8_t read = stream_->read();
+        if (read == sizeof(DataType)) {
+          state_ = ParserState::READ_SIZE;
+          read_bytes_ = 0;
+          computed_checksum_ = 0;
+        } else if (read == 0x06) {
+          state_ = ParserState::READ_PREAMBLE_ONE;
+        } else {
+          state_ = ParserState::INIT;
+        }
+        break;
+      }
+
+      case ParserState::READ_SIZE:
+        rx_buffer_[read_bytes_] = stream_->read();
+        computed_checksum_ ^= rx_buffer_[read_bytes_];
+        read_bytes_++;
+        if (read_bytes_ == sizeof(DataType) + 1) {
+          if (computed_checksum_ == rx_buffer_[read_bytes_ - 1]) {
+            memcpy(data_, rx_buffer_, sizeof(DataType));
+            state_ = ParserState::INIT;
+            return true;
+          } else {
+            state_ = ParserState::INIT;
+            return false;
+          }
+        }
+        break;
+    }
+  }
+  return false;
+
+  // start off by looking for the header bytes. If they were already found in
+  // a previous call, skip it.
   if (rx_len_ == 0) {
-    // this size check may be redundant due to the size check below, but for now
-    // I'll leave it the way it is.
+    // this size check may be redundant due to the size check below, but for
+    // now I'll leave it the way it is.
     if (stream_->available() >= 3) {
       // this will block until a 0x06 is found or buffer size becomes less
       // then 3.
