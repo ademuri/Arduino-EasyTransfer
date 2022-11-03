@@ -25,7 +25,7 @@ TEST(EasyTransfer, Transmit) {
   out.b = 0xDEADBEEF;
   out.c = 3.14159;
   transfer_out.sendData();
-  EXPECT_TRUE(transfer_in.receiveData());
+  ASSERT_TRUE(transfer_in.receiveData());
   EXPECT_EQ(in.a, out.a);
   EXPECT_EQ(in.b, out.b);
   EXPECT_EQ(in.c, out.c);
@@ -70,13 +70,26 @@ TEST(EasyTransfer, IgnoresSpuriousPreamble) {
   stream.write(0x6);
   stream.write(0x1);
   transfer.sendData();
-  EXPECT_FALSE(transfer.receiveData());
   EXPECT_TRUE(transfer.receiveData());
 
   stream.write(0x6);
   transfer.sendData();
-  EXPECT_FALSE(transfer.receiveData());
   EXPECT_TRUE(transfer.receiveData());
+
+  stream.write(0x6);
+  stream.write(0x85);
+  // Size: 0
+  stream.write(0x0);
+  // Incorrect checksum
+  stream.write(0x1);
+  transfer.sendData();
+  EXPECT_TRUE(transfer.receiveData());
+  EXPECT_EQ(stream.available(), 0);
+
+  stream.write(0x6);
+  stream.write(0x5);
+  stream.write(0x85);
+  EXPECT_FALSE(transfer.receiveData());
 }
 
 };  // namespace
